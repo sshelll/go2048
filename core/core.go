@@ -22,58 +22,61 @@ type core struct {
 	txt   *tview.TextView
 	table *tview.Table
 	won   bool
+	lost  bool
 
 	steps int
 }
 
 func NewCore(cols, rows int) *core {
 	c := &core{
-		board: func() [][]int {
-			board := make([][]int, cols)
-			for i := 0; i < cols; i++ {
-				board[i] = make([]int, rows)
-			}
-			return board
-		}(),
 		cols: cols,
 		rows: rows,
-		app:  tview.NewApplication(),
+		txt:  tview.NewTextView().SetDynamicColors(true).SetRegions(true),
 	}
-
-	txt := tview.NewTextView()
-	c.txt = txt
 
 	table := tview.NewTable()
 	table.SetBorders(true)
 	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if c.lost {
+			if event.Key() == tcell.KeyEsc {
+				c.app.Stop()
+			} else if event.Rune() == 'r' {
+				c.app.Stop()
+				c.Run()
+			}
+			return event
+		}
+
 		defer c.refreshTable()
 
 		changed := false
 		switch event.Key() {
 		case tcell.KeyUp:
-			changed = c.up()
+			changed = c.up(c.board)
 		case tcell.KeyDown:
-			changed = c.down()
+			changed = c.down(c.board)
 		case tcell.KeyLeft:
-			changed = c.left()
+			changed = c.left(c.board)
 		case tcell.KeyRight:
-			changed = c.right()
+			changed = c.right(c.board)
 		case tcell.KeyEsc:
 			c.app.Stop()
 		case tcell.KeyRune:
 			switch event.Rune() {
 			case 'h':
-				changed = c.left()
+				changed = c.left(c.board)
 			case 'j':
-				changed = c.down()
+				changed = c.down(c.board)
 			case 'k':
-				changed = c.up()
+				changed = c.up(c.board)
 			case 'l':
-				changed = c.right()
+				changed = c.right(c.board)
 			}
 		}
 
-		if changed {
+		if !changed {
+			c.checkGameOver()
+		} else {
 			c.randomInsert(1)
 			c.steps++
 			c.refreshTxt()
@@ -88,18 +91,27 @@ func NewCore(cols, rows int) *core {
 
 func (c *core) Run() {
 	// init board
+	c.steps = 0
+	c.app = tview.NewApplication()
+	c.lost, c.won = false, false
+	c.board = make([][]int, c.cols)
+	for i := 0; i < c.cols; i++ {
+		c.board[i] = make([]int, c.rows)
+	}
 	c.randomInsert(4)
 	c.refreshTable()
 	c.refreshTxt()
 
 	// init layout
+	c.table.SetBorderPadding(0, 0, 4, 0)
+	c.txt.SetBorderPadding(0, 0, 4, 0)
 	rootFlex := tview.NewFlex()
 	rootFlex.AddItem(tview.NewBox(), 0, 1, false)
 	rootFlex.AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(tview.NewBox(), 0, 1, false).
 		AddItem(c.table, 0, 1, true).
 		AddItem(c.txt, 0, 1, false),
-		0, 1, true)
+		50, 1, true)
 	rootFlex.AddItem(tview.NewBox(), 0, 1, false)
 
 	c.app.SetRoot(rootFlex, true).EnableMouse(false).Run()
@@ -138,7 +150,7 @@ func (c *core) refreshTable() {
 }
 
 func (c *core) refreshTxt() {
-	text := fmt.Sprintf("%s\n\nSteps: %d", help, c.steps)
+	text := fmt.Sprintf("%s\n\n[yellow]Steps: %d[white]", help, c.steps)
 
 	if c.won {
 		text += "\n\n" + youWin
@@ -155,7 +167,26 @@ func (c *core) refreshTxt() {
 		}
 	}
 
-	c.txt.SetText(text)
+	c.txt.Clear()
+	fmt.Fprintf(c.txt, text)
+}
+
+func (c *core) checkGameOver() {
+	copyBoard := make([][]int, c.cols)
+	for i := 0; i < c.cols; i++ {
+		copyBoard[i] = make([]int, c.rows)
+		copy(copyBoard[i], c.board[i])
+	}
+
+	if c.up(copyBoard) || c.down(copyBoard) || c.left(copyBoard) || c.right(copyBoard) {
+		return
+	}
+
+	c.lost = true
+	text := fmt.Sprintf("%s\n\n[yellow]Steps: %d[white]\n\n[red]Game Over!![white]\n[green]Press r to retry...[white]",
+		help, c.steps)
+	c.txt.Clear()
+	c.txt.Write([]byte(text))
 }
 
 func (c *core) numToCell(i, j int) *tview.TableCell {
@@ -212,9 +243,7 @@ func (c *core) numToCell(i, j int) *tview.TableCell {
 	return cell
 }
 
-func (c *core) up() (changed bool) {
-	board := c.board
-
+func (c *core) up(board [][]int) (changed bool) {
 	mv := func(row int) {
 		nums := make([]int, c.rows)
 		for i := 0; i < c.cols; i++ {
@@ -236,9 +265,7 @@ func (c *core) up() (changed bool) {
 	return
 }
 
-func (c *core) down() (changed bool) {
-	board := c.board
-
+func (c *core) down(board [][]int) (changed bool) {
 	mv := func(row int) {
 		nums := make([]int, 0, c.rows)
 		for i := c.cols - 1; i >= 0; i-- {
@@ -260,9 +287,7 @@ func (c *core) down() (changed bool) {
 	return
 }
 
-func (c *core) left() (changed bool) {
-	board := c.board
-
+func (c *core) left(board [][]int) (changed bool) {
 	mv := func(col int) {
 		nums := make([]int, 0, c.cols)
 		for i := 0; i < c.rows; i++ {
@@ -284,9 +309,7 @@ func (c *core) left() (changed bool) {
 	return
 }
 
-func (c *core) right() (changed bool) {
-	board := c.board
-
+func (c *core) right(board [][]int) (changed bool) {
 	mv := func(col int) {
 		nums := make([]int, 0, c.cols)
 		for i := c.rows - 1; i >= 0; i-- {
