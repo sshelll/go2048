@@ -172,6 +172,14 @@ func (c *core) refreshTxt() {
 }
 
 func (c *core) checkGameOver() {
+	for i := 0; i < c.cols; i++ {
+		for j := 0; j < c.rows; j++ {
+			if c.board[i][j] == 0 {
+				return
+			}
+		}
+	}
+
 	copyBoard := make([][]int, c.cols)
 	for i := 0; i < c.cols; i++ {
 		copyBoard[i] = make([]int, c.rows)
