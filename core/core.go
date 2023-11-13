@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	help   = "2048 GAME\nPress Esc to exit, press hjkl or arrow keys to move."
-	youWin = "You win!!!!!"
+	textTmpl     = "2048 GAME\nPress Esc to exit, press hjkl or arrow keys to move.\n\n[yellow]Steps: %d[white]\n[blue]Scores: %d[white]"
+	gameOverTmpl = textTmpl + "\n\n[red]Game Over!![white]\n[green]Press r to retry...[white]"
+	youWin       = "You win!!!!!"
 )
 
 type core struct {
@@ -25,6 +26,7 @@ type core struct {
 	lost  bool
 
 	steps int
+	score int
 }
 
 func NewCore(cols, rows int) *core {
@@ -92,6 +94,7 @@ func NewCore(cols, rows int) *core {
 func (c *core) Run() {
 	// init board
 	c.steps = 0
+	c.score = 0
 	c.app = tview.NewApplication()
 	c.lost, c.won = false, false
 	c.board = make([][]int, c.cols)
@@ -133,7 +136,9 @@ func (c *core) randomInsert(n int) {
 	// gen random 2 or 4 into n random empty cells
 	for _, v := range emptyCell {
 		i, j := v[0], v[1]
-		c.board[i][j] = 2 << uint(rand.Intn(2))
+		num := 2 << uint(rand.Intn(2))
+		c.board[i][j] = num
+		c.score += num
 		if n--; n == 0 {
 			return
 		}
@@ -150,7 +155,7 @@ func (c *core) refreshTable() {
 }
 
 func (c *core) refreshTxt() {
-	text := fmt.Sprintf("%s\n\n[yellow]Steps: %d[white]", help, c.steps)
+	text := fmt.Sprintf(textTmpl, c.steps, c.score)
 
 	if c.won {
 		text += "\n\n" + youWin
@@ -187,8 +192,7 @@ func (c *core) checkGameOver() {
 		}
 	}
 	c.lost = true
-	text := fmt.Sprintf("%s\n\n[yellow]Steps: %d[white]\n\n[red]Game Over!![white]\n[green]Press r to retry...[white]",
-		help, c.steps)
+	text := fmt.Sprintf(gameOverTmpl, c.steps, c.score)
 	c.txt.Clear()
 	c.txt.Write([]byte(text))
 }
