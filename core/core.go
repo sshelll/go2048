@@ -177,19 +177,15 @@ func (c *core) checkGameOver() {
 			if c.board[i][j] == 0 {
 				return
 			}
+			// check left and up should be enough, because we walk from left to right, top to bottom
+			if i > 0 && c.board[i][j] == c.board[i-1][j] {
+				return
+			}
+			if j > 0 && c.board[i][j] == c.board[i][j-1] {
+				return
+			}
 		}
 	}
-
-	copyBoard := make([][]int, c.cols)
-	for i := 0; i < c.cols; i++ {
-		copyBoard[i] = make([]int, c.rows)
-		copy(copyBoard[i], c.board[i])
-	}
-
-	if c.up(copyBoard) || c.down(copyBoard) || c.left(copyBoard) || c.right(copyBoard) {
-		return
-	}
-
 	c.lost = true
 	text := fmt.Sprintf("%s\n\n[yellow]Steps: %d[white]\n\n[red]Game Over!![white]\n[green]Press r to retry...[white]",
 		help, c.steps)
