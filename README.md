@@ -6,4 +6,5 @@
 `$ go2048`
 
 ## ScreenShot
-<img width="1920" alt="image" src="https://github.com/sshelll/go2048/assets/49158400/e1c5a55e-774f-4216-b11e-92a1d2699b8a">
+![image](https://github.com/sshelll/go2048/assets/49158400/9d015ee6-5246-4a9d-9c7d-bd21c1c52101)
+
